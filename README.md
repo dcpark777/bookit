@@ -2,8 +2,11 @@
 
 Build Tool:
 - Poetry: https://python-poetry.org/docs/
+
+Poetry installation command:
 `curl -sSL https://install.python-poetry.org | python3 -`
-Verify poetry installation with:
+
+Poetry installation verification command:
 `$ poetry --version`
 
 
