@@ -1,44 +1,44 @@
 import configparser
+import pytz
+import time
+from datetime import datetime
 
-from resy_client import ResyClient
 from bookit.models import DesiredReservation, ResyAuth, SnipeTime
-
+from bookit.resy_client import ResyClient
+from bookit.resy_booking_workflow import ResyBookingWorkflow
 
 class ResyBookingBot:
     def __init__(self) -> None:
+        pass
+
+    def main(self):
         resy_config = configparser.ConfigParser()
         resy_config.read("resy.ini")
-        self.resy_auth = ResyAuth(**resy_config['resy.keys'])
-        self.reservation_details = DesiredReservation(**resy_config['resy.reservation.details'])
-        self.snipe_time = SnipeTime(**resy_config['resy.snipe.time'])
+        resy_auth = ResyAuth(**resy_config['resy.keys'])
+        reservation_details = DesiredReservation(**resy_config['resy.reservation.details'])
+        snipe_info = SnipeTime(**resy_config['resy.snipe'])
 
-    def run(self):
-        print('Running now...')
-        resy_client = ResyClient(resy_auth=self.resy_auth)
-
-        # Find all available reservation slots
-        available_reservations = resy_client.find_reservations(reservation_details=self.reservation_details)
-        print(f'\nAvailable Reservations: {available_reservations}')
-        first_slot_time = next(iter(available_reservations.keys()))
-        first_slot = available_reservations[first_slot_time]
-        print(first_slot)
-        
-        # Get details for slot to book
-        booking_details = resy_client.get_reservation_details(
-            config_token=first_slot.config_token,
-            date=self.reservation_details.date,
-            party_size=self.reservation_details.party_size,
+        resy_client = ResyClient(resy_auth=resy_auth)
+        resy_booking_workflow = ResyBookingWorkflow(
+            resy_client=resy_client,
+            reservation_details=reservation_details
         )
-        print(f'\nBooking Details: {booking_details}')
-
-        # Book reservation slot
-        resy_token = resy_client.book_reservation(payment_method_id=booking_details.payment_method_id, book_token=booking_details.book_token)
-        print(f'\nResy Token: {resy_token}')
-        print('Reservation Complete!')
         
-
+        tz_NY = pytz.timezone('America/New_York')
+        success = False
+        while not success:
+            current_time = datetime.now(tz=tz_NY)
+            print(f'Starting run for {current_time}')
+            if current_time >= snipe_info.start_time:
+                response = resy_booking_workflow.run()
+                print(f'FINAL RESPONSE: {response}')
+                if response:
+                    success = True
+            else:
+                print(f'Not time to snipe. Sleeping for {snipe_info.attempt_interval} seconds...')
+                time.sleep(snipe_info.attempt_interval)
 
 
 if __name__ == "__main__":
     bot = ResyBookingBot()
-    bot.run()
+    bot.main()

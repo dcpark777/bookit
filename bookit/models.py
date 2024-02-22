@@ -1,4 +1,7 @@
+import pytz
+
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import List
 
@@ -51,5 +54,14 @@ class BookingInfo:
 
 @dataclass
 class SnipeTime:
-    hours: str # int?
-    minutes: str # int?
+    time: str # int?
+    attempt_interval: int # int?
+
+    def __post_init__(self):
+        self.attempt_interval = int(self.attempt_interval)
+
+    @property
+    def start_time(self):
+        hour, minute = self.time.split(':')
+        tz_NY = pytz.timezone('America/New_York')
+        return datetime.now(tz=tz_NY).replace(hour=int(hour), minute=int(minute), second=0, microsecond=0)
